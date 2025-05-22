@@ -1,4 +1,4 @@
-# Conversor DOCX a XLSX para Quiz Maker (WordPress Plugin) - Versión Streamlit
+# Conversor DOCX/PDF a XLSX para Quiz Maker (WordPress Plugin) - Versión Streamlit
 # Autor: Tedi One - Nexo de Negocios Digitales
 
 import docx
@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 from io import BytesIO
 import json
+import fitz  # PyMuPDF
 
 EXPLICACION_TEXTO = "Por favor revisa la explicación de la respuesta para entender mejor el tema abordado."
 TIPO_PREGUNTA = "radio"
@@ -15,13 +16,16 @@ def cargar_documento(file):
     doc = docx.Document(file)
     return [p for p in doc.paragraphs if p.text.strip() != ""]
 
+def cargar_pdf(file):
+    text = ""
+    pdf = fitz.open(stream=file.read(), filetype="pdf")
+    for page in pdf:
+        text += page.get_text()
+    lineas = [l.strip() for l in text.split("\n") if l.strip() != ""]
+    return lineas
+
 def es_respuesta_correcta(run):
-    try:
-        return run.bold or (hasattr(run.font, 'highlight_color') and run.font.highlight_color is not None)
-    except:
-        return False
-    except:
-        return False
+    return run.bold or (run.font.highlight_color is not None)
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
@@ -38,9 +42,9 @@ def extraer_preguntas_y_respuestas(parrafos):
                 p = parrafos[i]
                 p_text = p.text.strip() if hasattr(p, 'text') else p.strip()
 
-                # Detectar explicación por texto completamente en negrita o resaltado
+                # Extraer directamente la primera línea que esté completamente en negrita como explicación correcta
                 if hasattr(p, 'runs') and any(es_respuesta_correcta(run) for run in p.runs):
-                    if all(es_respuesta_correcta(run) for run in p.runs if run.text.strip()) and len(p_text.split()) <= 3:
+                    if all(run.bold or (run.font.highlight_color is not None) for run in p.runs if run.text.strip()):
                         explicacion = p_text
                         i += 1
                         continue
@@ -123,8 +127,11 @@ def construir_estructura_xlsx(preguntas):
         data.append(fila)
     return pd.DataFrame(data)
 
-def convertir_y_descargar(uploaded_file):
-    parrafos = cargar_documento(uploaded_file)
+def convertir_y_descargar(uploaded_file, tipo_archivo):
+    if tipo_archivo == "docx":
+        parrafos = cargar_documento(uploaded_file)
+    else:
+        parrafos = cargar_pdf(uploaded_file)
     preguntas = extraer_preguntas_y_respuestas(parrafos)
     if not preguntas:
         raise ValueError("No se encontraron preguntas válidas en el archivo.")
@@ -135,15 +142,16 @@ def convertir_y_descargar(uploaded_file):
     return buffer
 
 # === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Formato Avanzado)")
-st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
+st.title("Conversor DOCX / PDF a XLSX - Quiz Maker (Formato Avanzado)")
+st.markdown("Sube tu archivo .docx o .pdf con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
 
-uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
+uploaded_file = st.file_uploader("Selecciona el archivo DOCX o PDF", type=["docx", "pdf"])
 
 if uploaded_file:
+    tipo_archivo = uploaded_file.name.split(".")[-1].lower()
     if st.button("Convertir y descargar XLSX"):
         try:
-            xlsx_data = convertir_y_descargar(uploaded_file)
+            xlsx_data = convertir_y_descargar(uploaded_file, tipo_archivo)
             st.success("Conversión completada. Descarga el archivo a continuación.")
             st.download_button(
                 label="📥 Descargar archivo XLSX",
