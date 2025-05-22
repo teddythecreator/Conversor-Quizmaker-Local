@@ -1,6 +1,5 @@
 # Conversor DOCX/PDF a XLSX para Quiz Maker (WordPress Plugin) - Versión Streamlit
 # Autor: Tedi One - Nexo de Negocios Digitales
-# Descripción: App web con Streamlit para convertir documentos .docx o .pdf con preguntas tipo test al formato XLSX compatible con Quiz Maker
 
 import docx
 import pandas as pd
@@ -27,21 +26,23 @@ def cargar_pdf(file):
     return lineas
 
 def es_respuesta_correcta(run):
-    return run.bold or run.font.highlight_color is not None
+    return run.bold or (run.font.highlight_color is not None)
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
     while i < len(parrafos):
         texto = parrafos[i].text.strip() if hasattr(parrafos[i], 'text') else parrafos[i]
-        if len(texto.split()) > 3 and not texto.lower().startswith("respuesta"):
+
+        # Evitar títulos documentales comunes
+        if len(texto.split()) > 3 and not texto.lower().startswith(("respuesta", "examen", "plantilla")):
             pregunta = texto
             respuestas = []
             explicacion = ""
             i += 1
             while i < len(parrafos):
                 p_text = parrafos[i].text.strip() if hasattr(parrafos[i], 'text') else parrafos[i].strip()
-                if p_text.lower().startswith("explicación") or p_text.lower().startswith("explicacion"):
+                if p_text.lower().startswith(("explicación", "explicacion")):
                     explicacion = p_text
                     break
                 elif len(p_text) == 0:
@@ -56,7 +57,11 @@ def extraer_preguntas_y_respuestas(parrafos):
                                 correcta = True
                             respuesta += run.text
                     else:
-                        respuesta = p_text
+                        if p_text.startswith("*") or p_text.startswith("✔") or "(*)" in p_text:
+                            correcta = True
+                            respuesta = p_text.lstrip("*✔ ").replace("(*)", "").strip()
+                        else:
+                            respuesta = p_text
                     respuestas.append((respuesta.strip(), correcta))
                 i += 1
             if not explicacion:
@@ -76,7 +81,7 @@ def extraer_preguntas_y_respuestas(parrafos):
 
 def construir_estructura_xlsx(preguntas):
     data = []
-    for idx, item in enumerate(preguntas):
+    for item in preguntas:
         answers_json = []
         for i, (texto, correcto) in enumerate(item["respuestas"], start=1):
             answers_json.append({
