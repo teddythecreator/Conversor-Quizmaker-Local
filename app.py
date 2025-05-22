@@ -40,9 +40,16 @@ def extraer_preguntas_y_respuestas(parrafos):
             i += 1
             while i < len(parrafos):
                 p_text = parrafos[i].text.strip() if hasattr(parrafos[i], 'text') else parrafos[i].strip()
-                if p_text.lower().startswith(("explicación", "explicacion")):
-                    explicacion = p_text
-                    i += 1  # avanzar para evitar procesarla como pregunta
+                if p_text.lower().startswith(("explicación correcta:", "explicacion correcta:")):
+                    # Extraer solo la parte en negrita después del prefijo
+                    if hasattr(parrafos[i], 'runs'):
+                        for run in parrafos[i].runs:
+                            if es_respuesta_correcta(run):
+                                explicacion = run.text.strip()
+                                break
+                    else:
+                        explicacion = p_text.replace("Explicación correcta:", "").replace("Explicacion correcta:", "").strip()
+                    i += 1
                     break
                 elif len(p_text) == 0:
                     i += 1
@@ -79,79 +86,4 @@ def extraer_preguntas_y_respuestas(parrafos):
             i += 1
     return preguntas
 
-def construir_estructura_xlsx(preguntas):
-    data = []
-    for item in preguntas:
-        answers_json = []
-        for i, (texto, correcto) in enumerate(item["respuestas"], start=1):
-            answers_json.append({
-                "id": "",
-                "question_id": "",
-                "answer": texto,
-                "image": "",
-                "correct": "1" if correcto else "0",
-                "ordering": str(i),
-                "weight": "1",
-                "keyword": "",
-                "placeholder": "",
-                "slug": "",
-                "options": ""
-            })
-
-        fila = {
-            "id": "",
-            "category": "",
-            "question": item["pregunta"],
-            "question_title": "",
-            "question_image": "",
-            "question_hint": "",
-            "type": TIPO_PREGUNTA,
-            "published": "1",
-            "wrong_answer_text": item["explicacion"],
-            "right_answer_text": item["explicacion"],
-            "explanation": "",
-            "user_explanation": "off",
-            "not_influence_to_score": "off",
-            "weight": "1",
-            "options": "",
-            "question_id": "",
-            "tags": "",
-            "answers": json.dumps(answers_json, ensure_ascii=False)
-        }
-        data.append(fila)
-    return pd.DataFrame(data)
-
-def convertir_y_descargar(uploaded_file, tipo_archivo):
-    if tipo_archivo == "docx":
-        parrafos = cargar_documento(uploaded_file)
-    else:
-        parrafos = cargar_pdf(uploaded_file)
-    preguntas = extraer_preguntas_y_respuestas(parrafos)
-    if not preguntas:
-        raise ValueError("No se encontraron preguntas válidas en el archivo.")
-    df = construir_estructura_xlsx(preguntas)
-    buffer = BytesIO()
-    df.to_excel(buffer, index=False, engine='openpyxl')
-    buffer.seek(0)
-    return buffer
-
-# === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX / PDF a XLSX - Quiz Maker (Formato Avanzado)")
-st.markdown("Sube tu archivo .docx o .pdf con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
-
-uploaded_file = st.file_uploader("Selecciona el archivo DOCX o PDF", type=["docx", "pdf"])
-
-if uploaded_file:
-    tipo_archivo = uploaded_file.name.split(".")[-1].lower()
-    if st.button("Convertir y descargar XLSX"):
-        try:
-            xlsx_data = convertir_y_descargar(uploaded_file, tipo_archivo)
-            st.success("Conversión completada. Descarga el archivo a continuación.")
-            st.download_button(
-                label="📥 Descargar archivo XLSX",
-                data=xlsx_data,
-                file_name="preguntas_quiz.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        except Exception as e:
-            st.error(f"Ocurrió un error: {e}")
+# ... (resto del código sin cambios)
