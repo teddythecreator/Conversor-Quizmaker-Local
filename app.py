@@ -39,31 +39,19 @@ def extraer_preguntas_y_respuestas(parrafos):
             explicacion = ""
             i += 1
             while i < len(parrafos):
-                p = parrafos[i]
-                p_text = p.text.strip() if hasattr(p, 'text') else p.strip()
-
-                # Detectar línea con "Explicación correcta:" pero extraer SOLO la parte en negrita (sin prefijo)
-                if "explicación correcta" in p_text.lower():
-                    if hasattr(p, 'runs'):
-                        for run in p.runs:
-                            if es_respuesta_correcta(run):
-                                explicacion = run.text.strip()
-                                break
-                    else:
-                        partes = p_text.split(":", 1)
-                        if len(partes) > 1:
-                            explicacion = partes[1].strip()
-                    i += 1
-                    continue
-
+                p_text = parrafos[i].text.strip() if hasattr(parrafos[i], 'text') else parrafos[i].strip()
+                if p_text.lower().startswith(("explicación", "explicacion")):
+                    explicacion = p_text
+                    i += 1  # avanzar para evitar procesarla como pregunta
+                    break
                 elif len(p_text) == 0:
                     i += 1
                     continue
                 else:
                     respuesta = ""
                     correcta = False
-                    if hasattr(p, 'runs'):
-                        for run in p.runs:
+                    if hasattr(parrafos[i], 'runs'):
+                        for run in parrafos[i].runs:
                             if es_respuesta_correcta(run):
                                 correcta = True
                             respuesta += run.text
@@ -75,7 +63,6 @@ def extraer_preguntas_y_respuestas(parrafos):
                             respuesta = p_text
                     respuestas.append((respuesta.strip(), correcta))
                 i += 1
-
             if not explicacion:
                 explicacion = EXPLICACION_TEXTO
             if len(respuestas) < 2:
