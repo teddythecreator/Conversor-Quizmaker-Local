@@ -39,26 +39,31 @@ def extraer_preguntas_y_respuestas(parrafos):
             explicacion = ""
             i += 1
             while i < len(parrafos):
-                p_text = parrafos[i].text.strip() if hasattr(parrafos[i], 'text') else parrafos[i].strip()
-                if p_text.lower().startswith(("explicación correcta:", "explicacion correcta:")):
-                    # Extraer solo la parte en negrita después del prefijo
-                    if hasattr(parrafos[i], 'runs'):
-                        for run in parrafos[i].runs:
+                p = parrafos[i]
+                p_text = p.text.strip() if hasattr(p, 'text') else p.strip()
+
+                # Detectar línea con "Explicación correcta:" pero extraer SOLO la parte en negrita (sin prefijo)
+                if "explicación correcta" in p_text.lower():
+                    if hasattr(p, 'runs'):
+                        for run in p.runs:
                             if es_respuesta_correcta(run):
                                 explicacion = run.text.strip()
                                 break
                     else:
-                        explicacion = p_text.replace("Explicación correcta:", "").replace("Explicacion correcta:", "").strip()
+                        partes = p_text.split(":", 1)
+                        if len(partes) > 1:
+                            explicacion = partes[1].strip()
                     i += 1
-                    break
+                    continue
+
                 elif len(p_text) == 0:
                     i += 1
                     continue
                 else:
                     respuesta = ""
                     correcta = False
-                    if hasattr(parrafos[i], 'runs'):
-                        for run in parrafos[i].runs:
+                    if hasattr(p, 'runs'):
+                        for run in p.runs:
                             if es_respuesta_correcta(run):
                                 correcta = True
                             respuesta += run.text
@@ -70,6 +75,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                             respuesta = p_text
                     respuestas.append((respuesta.strip(), correcta))
                 i += 1
+
             if not explicacion:
                 explicacion = EXPLICACION_TEXTO
             if len(respuestas) < 2:
