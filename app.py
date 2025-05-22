@@ -16,9 +16,7 @@ def cargar_documento(file):
     return [p for p in doc.paragraphs if p.text.strip() != ""]
 
 def es_respuesta_correcta(run):
-    return run.bold or (run.font.highlight_color is not None)
-    except:
-        return False
+    return run.bold or (run.font and run.font.highlight_color is not None)
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
