@@ -16,12 +16,7 @@ def cargar_documento(file):
     return [p for p in doc.paragraphs if p.text.strip() != ""]
 
 def es_respuesta_correcta(run):
-    try:
-        return run.bold or (hasattr(run.font, 'highlight_color') and run.font.highlight_color is not None)
-    except:
-        return False
-    except:
-        return False
+    return run.bold or (run.font.highlight_color is not None)
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
@@ -38,9 +33,8 @@ def extraer_preguntas_y_respuestas(parrafos):
                 p = parrafos[i]
                 p_text = p.text.strip() if hasattr(p, 'text') else p.strip()
 
-                # Detectar explicación por texto completamente en negrita o resaltado
                 if hasattr(p, 'runs') and any(es_respuesta_correcta(run) for run in p.runs):
-                    if all(es_respuesta_correcta(run) for run in p.runs if run.text.strip()) and len(p_text.split()) <= 3:
+                    if all(run.bold or (run.font.highlight_color is not None) for run in p.runs if run.text.strip()):
                         explicacion = p_text
                         i += 1
                         continue
