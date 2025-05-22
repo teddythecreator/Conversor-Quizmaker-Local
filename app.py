@@ -33,8 +33,9 @@ def extraer_preguntas_y_respuestas(parrafos):
                 p = parrafos[i]
                 p_text = p.text.strip() if hasattr(p, 'text') else p.strip()
 
+                # Detectar explicación por texto completamente en negrita
                 if hasattr(p, 'runs') and any(es_respuesta_correcta(run) for run in p.runs):
-                    if all(run.bold or (run.font.highlight_color is not None) for run in p.runs if run.text.strip()):
+                    if all(es_respuesta_correcta(run) for run in p.runs if run.text.strip()):
                         explicacion = p_text
                         i += 1
                         continue
