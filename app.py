@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 from io import BytesIO
 import json
+import re
 
 EXPLICACION_TEXTO = "Por favor revisa la explicación de la respuesta para entender mejor el tema abordado."
 TIPO_PREGUNTA = "radio"
@@ -15,64 +16,55 @@ def cargar_documento(file):
     doc = docx.Document(file)
     return [p for p in doc.paragraphs if p.text.strip() != ""]
 
-def es_respuesta_correcta(run):
-    return run.bold or (run.font.highlight_color is not None)
+def extraer_respuesta_correcta(parrafos):
+    for p in parrafos:
+        text = p.text.strip().lower()
+        if text.startswith("respuesta correcta") or text.startswith("respuesta:"):
+            match = re.search(r"[a-d]", text)
+            if match:
+                return match.group(0).lower()
+    return None
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
     while i < len(parrafos):
-        texto = parrafos[i].text.strip() if hasattr(parrafos[i], 'text') else parrafos[i]
-
-        if len(texto.split()) > 3 and not texto.lower().startswith(("respuesta", "examen", "plantilla", "explicación")):
+        texto = parrafos[i].text.strip()
+        if len(texto.split()) > 3 and texto.endswith("?"):
             pregunta = texto
             respuestas = []
             explicacion = ""
+            letras = ["a", "b", "c", "d"]
             i += 1
             while i < len(parrafos):
-                p = parrafos[i]
-                p_text = p.text.strip() if hasattr(p, 'text') else p.strip()
-
-                if hasattr(p, 'runs') and any(es_respuesta_correcta(run) for run in p.runs):
-                    if all(run.bold or (run.font.highlight_color is not None) for run in p.runs if run.text.strip()):
-                        explicacion = p_text
-                        i += 1
-                        continue
-
-                elif len(p_text) == 0:
+                line = parrafos[i].text.strip()
+                if line.lower().startswith("respuesta correcta"):
+                    match = re.search(r"[a-d]", line.lower())
+                    letra_correcta = match.group(0) if match else None
+                elif line.lower().startswith("explicación correcta"):
+                    explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
+                    break
+                elif line == "":
                     i += 1
                     continue
                 else:
-                    respuesta = ""
-                    correcta = False
-                    if hasattr(p, 'runs'):
-                        for run in p.runs:
-                            if es_respuesta_correcta(run):
-                                correcta = True
-                            respuesta += run.text
-                    else:
-                        if p_text.startswith("*") or p_text.startswith("✔") or "(*)" in p_text:
-                            correcta = True
-                            respuesta = p_text.lstrip("*✔ ").replace("(*)", "").strip()
-                        else:
-                            respuesta = p_text
-                    respuestas.append((respuesta.strip(), correcta))
+                    respuestas.append(line)
                 i += 1
 
-            if not explicacion:
-                explicacion = EXPLICACION_TEXTO
-            if len(respuestas) < 2:
-                st.warning(f"❗ La pregunta '{pregunta}' tiene menos de 2 respuestas. Será omitida.")
-            elif not any(c for _, c in respuestas):
-                st.warning(f"⚠️ La pregunta '{pregunta}' no tiene ninguna respuesta marcada como correcta.")
-            else:
+            if len(respuestas) >= 2:
+                letra_correcta = extraer_respuesta_correcta(parrafos[i-5:i+5])
+                respuestas_finales = []
+                for idx, texto_r in enumerate(respuestas):
+                    letra = letras[idx] if idx < len(letras) else ""
+                    es_correcta = letra == letra_correcta
+                    respuestas_finales.append((texto_r, es_correcta))
+
                 preguntas.append({
                     "pregunta": pregunta,
-                    "respuestas": respuestas,
-                    "explicacion": explicacion
+                    "respuestas": respuestas_finales,
+                    "explicacion": explicacion or EXPLICACION_TEXTO
                 })
-        else:
-            i += 1
+        i += 1
     return preguntas
 
 def construir_estructura_xlsx(preguntas):
