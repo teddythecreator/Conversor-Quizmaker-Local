@@ -6,7 +6,6 @@ import pandas as pd
 import streamlit as st
 from io import BytesIO
 import json
-from docx.enum.text import WD_COLOR_INDEX
 
 EXPLICACION_TEXTO = "Por favor revisa la explicación de la respuesta para entender mejor el tema abordado."
 TIPO_PREGUNTA = "radio"
@@ -17,7 +16,10 @@ def cargar_documento(file):
     return [p for p in doc.paragraphs if p.text.strip() != ""]
 
 def es_respuesta_correcta(run):
-    return run.bold or (run.font.highlight_color not in [None, WD_COLOR_INDEX.AUTO])
+    try:
+        return run.bold or (run.font.highlight_color is not None)
+    except:
+        return False
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
@@ -36,7 +38,7 @@ def extraer_preguntas_y_respuestas(parrafos):
 
                 # Detectar explicación por texto completamente en negrita o resaltado
                 if hasattr(p, 'runs') and any(es_respuesta_correcta(run) for run in p.runs):
-                    if all(es_respuesta_correcta(run) for run in p.runs if run.text.strip()):
+                    if all(es_respuesta_correcta(run) for run in p.runs if run.text.strip()) and len(p_text.split()) <= 3:
                         explicacion = p_text
                         i += 1
                         continue
