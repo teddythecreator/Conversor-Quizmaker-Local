@@ -8,11 +8,10 @@ from io import BytesIO
 import json
 import fitz  # PyMuPDF
 
-# === CONFIGURACIÓN INICIAL ===
 EXPLICACION_TEXTO = "Por favor revisa la explicación de la respuesta para entender mejor el tema abordado."
 TIPO_PREGUNTA = "radio"
 
-# === FUNCIONES DE PROCESAMIENTO ===
+# === FUNCIONES ===
 def cargar_documento(file):
     doc = docx.Document(file)
     return [p for p in doc.paragraphs if p.text.strip() != ""]
@@ -34,8 +33,7 @@ def extraer_preguntas_y_respuestas(parrafos):
     while i < len(parrafos):
         texto = parrafos[i].text.strip() if hasattr(parrafos[i], 'text') else parrafos[i]
 
-        # Evitar títulos documentales comunes
-        if len(texto.split()) > 3 and not texto.lower().startswith(("respuesta", "examen", "plantilla")):
+        if len(texto.split()) > 3 and not texto.lower().startswith(("respuesta", "examen", "plantilla", "explicación")):
             pregunta = texto
             respuestas = []
             explicacion = ""
@@ -44,6 +42,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                 p_text = parrafos[i].text.strip() if hasattr(parrafos[i], 'text') else parrafos[i].strip()
                 if p_text.lower().startswith(("explicación", "explicacion")):
                     explicacion = p_text
+                    i += 1  # avanzar para evitar procesarla como pregunta
                     break
                 elif len(p_text) == 0:
                     i += 1
@@ -76,7 +75,8 @@ def extraer_preguntas_y_respuestas(parrafos):
                     "respuestas": respuestas,
                     "explicacion": explicacion
                 })
-        i += 1
+        else:
+            i += 1
     return preguntas
 
 def construir_estructura_xlsx(preguntas):
