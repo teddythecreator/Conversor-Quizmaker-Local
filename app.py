@@ -37,7 +37,6 @@ def extraer_preguntas_y_respuestas(parrafos):
                 elif line.lower().startswith("explicación correcta"):
                     explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
                     i += 1
-                    break
                 elif line == "":
                     i += 1
                     continue
