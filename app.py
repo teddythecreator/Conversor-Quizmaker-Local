@@ -19,21 +19,21 @@ def cargar_documento(file):
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
+    letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
         texto = parrafos[i].text.strip()
         if len(texto.split()) > 3 and texto.endswith("?"):
             pregunta = texto
             respuestas = []
             explicacion = ""
-            respuesta_correcta = ""
-            letras = ["a", "b", "c", "d"]
+            respuesta_correcta_letra = ""
             i += 1
             while i < len(parrafos):
                 line = parrafos[i].text.strip()
                 if line.lower().startswith("respuesta correcta"):
                     match = re.search(r"[a-d]", line.lower())
                     if match:
-                        respuesta_correcta = match.group(0).lower()
+                        respuesta_correcta_letra = match.group(0).lower()
                     i += 1
                 elif line.lower().startswith("explicación correcta"):
                     explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
@@ -45,21 +45,21 @@ def extraer_preguntas_y_respuestas(parrafos):
                 else:
                     respuestas.append(line)
                     i += 1
-            if len(respuestas) >= 2:
-                # Asignar correctamente la respuesta correcta a la lista de respuestas
-                respuestas_finales = []
-                for idx, texto_r in enumerate(respuestas):
-                    letra = letras[idx] if idx < len(letras) else ""
-                    es_correcta = (letra == respuesta_correcta)
-                    respuestas_finales.append((texto_r, es_correcta))
-                preguntas.append({
-                    "pregunta": pregunta,
-                    "respuestas": respuestas_finales,
-                    "explicacion": explicacion or EXPLICACION_TEXTO
-                })
+            # Asignar la correcta según la letra real, no la posición en la lista
+            respuestas_finales = []
+            for idx, texto_r in enumerate(respuestas):
+                letra_opcion = letras[idx] if idx < len(letras) else ""
+                es_correcta = (letra_opcion == respuesta_correcta_letra)
+                respuestas_finales.append((texto_r, es_correcta))
+            preguntas.append({
+                "pregunta": pregunta,
+                "respuestas": respuestas_finales,
+                "explicacion": explicacion or EXPLICACION_TEXTO
+            })
         else:
             i += 1
     return preguntas
+
 
 def construir_estructura_xlsx(preguntas):
     data = []
