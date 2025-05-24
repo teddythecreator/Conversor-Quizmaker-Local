@@ -11,7 +11,6 @@ import re
 EXPLICACION_TEXTO = "Por favor revisa la explicación de la respuesta para entender mejor el tema abordado."
 TIPO_PREGUNTA = "radio"
 
-# === FUNCIONES ===
 def cargar_documento(file):
     doc = docx.Document(file)
     return [p for p in doc.paragraphs if p.text.strip() != ""]
@@ -45,7 +44,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                 else:
                     respuestas.append(line)
                     i += 1
-            # Asignar la correcta según la letra real, no la posición en la lista
+            # Asignar la correcta según la letra exacta de la línea "Respuesta correcta:"
             respuestas_finales = []
             for idx, texto_r in enumerate(respuestas):
                 letra_opcion = letras[idx] if idx < len(letras) else ""
@@ -59,7 +58,6 @@ def extraer_preguntas_y_respuestas(parrafos):
         else:
             i += 1
     return preguntas
-
 
 def construir_estructura_xlsx(preguntas):
     data = []
