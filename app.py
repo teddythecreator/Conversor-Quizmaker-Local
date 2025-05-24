@@ -55,6 +55,8 @@ def extraer_preguntas_y_respuestas(parrafos):
                     "respuestas": respuestas_finales,
                     "explicacion": explicacion or EXPLICACION_TEXTO
                 })
+            else:
+                i += 1
         else:
             i += 1
     return preguntas
