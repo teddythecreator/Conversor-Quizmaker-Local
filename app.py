@@ -24,8 +24,8 @@ def extraer_preguntas_y_respuestas(parrafos):
         if len(texto.split()) > 3 and texto.endswith("?"):
             pregunta = texto
             respuestas = []
-            respuesta_correcta_letra = ""
             explicacion = ""
+            respuesta_correcta_letra = ""
             i += 1
             while i < len(parrafos):
                 line = parrafos[i].text.strip()
