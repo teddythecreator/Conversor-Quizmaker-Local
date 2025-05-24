@@ -18,21 +18,18 @@ def cargar_documento(file):
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
-    letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
         texto = parrafos[i].text.strip()
         if len(texto.split()) > 3 and texto.endswith("?"):
             pregunta = texto
             respuestas = []
             explicacion = ""
-            respuesta_correcta = ""
+            respuesta_correcta_texto = ""
             i += 1
             while i < len(parrafos):
                 line = parrafos[i].text.strip()
                 if line.lower().startswith("respuesta correcta"):
-                    match = re.search(r"[a-d]", line.lower())
-                    if match:
-                        respuesta_correcta = match.group(0).lower()
+                    respuesta_correcta_texto = parrafos[i-1].text.strip()
                     i += 1
                 elif line.lower().startswith("explicación correcta"):
                     explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
@@ -44,17 +41,12 @@ def extraer_preguntas_y_respuestas(parrafos):
                 else:
                     respuestas.append(line)
                     i += 1
-            if len(respuestas) >= 2 and respuesta_correcta:
-                respuestas_finales = []
-                for idx, texto_r in enumerate(respuestas):
-                    letra = letras[idx] if idx < len(letras) else ""
-                    es_correcta = (letra == respuesta_correcta)
-                    respuestas_finales.append((texto_r, es_correcta))
-                preguntas.append({
-                    "pregunta": pregunta,
-                    "respuestas": respuestas_finales,
-                    "explicacion": explicacion or EXPLICACION_TEXTO
-                })
+            respuestas_finales = [(texto_r, texto_r == respuesta_correcta_texto) for texto_r in respuestas]
+            preguntas.append({
+                "pregunta": pregunta,
+                "respuestas": respuestas_finales,
+                "explicacion": explicacion or EXPLICACION_TEXTO
+            })
         else:
             i += 1
     return preguntas
