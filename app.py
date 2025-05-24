@@ -25,14 +25,17 @@ def extraer_preguntas_y_respuestas(parrafos):
             pregunta = texto
             respuestas = []
             explicacion = ""
-            respuesta_correcta_letra = ""
+            respuesta_correcta = ""
             i += 1
             while i < len(parrafos):
                 line = parrafos[i].text.strip()
                 if line.lower().startswith("respuesta correcta"):
-                    match = re.search(r"[a-d]", line.lower())
-                    if match:
-                        respuesta_correcta_letra = match.group(0).lower()
+                    respuesta_correcta_line = parrafos[i].text.strip()
+                    if respuesta_correcta_line.lower().startswith("respuesta correcta"):
+                        letra_idx = respuesta_correcta_line.split(":")[-1].strip().lower()
+                        idx = ord(letra_idx) - ord('a')
+                        if 0 <= idx < len(respuestas):
+                            respuesta_correcta = respuestas[idx]
                     i += 1
                 elif line.lower().startswith("explicación correcta"):
                     explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
@@ -44,11 +47,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                 else:
                     respuestas.append(line)
                     i += 1
-            respuestas_finales = []
-            for idx, texto_r in enumerate(respuestas):
-                letra_opcion = letras[idx] if idx < len(letras) else ""
-                es_correcta = (letra_opcion == respuesta_correcta_letra)
-                respuestas_finales.append((texto_r, es_correcta))
+            respuestas_finales = [(texto_r, texto_r == respuesta_correcta) for texto_r in respuestas]
             preguntas.append({
                 "pregunta": pregunta,
                 "respuestas": respuestas_finales,
