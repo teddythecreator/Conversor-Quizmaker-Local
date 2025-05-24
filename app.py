@@ -18,6 +18,7 @@ def cargar_documento(file):
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
+    letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
         texto = parrafos[i].text.strip()
         if len(texto.split()) > 3 and texto.endswith("?"):
@@ -25,7 +26,6 @@ def extraer_preguntas_y_respuestas(parrafos):
             respuestas = []
             explicacion = ""
             respuesta_correcta = ""
-            letras = ["a", "b", "c", "d"]
             i += 1
             while i < len(parrafos):
                 line = parrafos[i].text.strip()
@@ -37,6 +37,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                 elif line.lower().startswith("explicación correcta"):
                     explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
                     i += 1
+                    break
                 elif line == "":
                     i += 1
                     continue
@@ -47,7 +48,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                 respuestas_finales = []
                 for idx, texto_r in enumerate(respuestas):
                     letra = letras[idx] if idx < len(letras) else ""
-                    es_correcta = letra == respuesta_correcta
+                    es_correcta = (letra == respuesta_correcta)
                     respuestas_finales.append((texto_r, es_correcta))
                 preguntas.append({
                     "pregunta": pregunta,
