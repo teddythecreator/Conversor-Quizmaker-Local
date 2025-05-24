@@ -44,7 +44,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                 else:
                     respuestas.append(line)
                     i += 1
-            if len(respuestas) >= 2:
+            if len(respuestas) >= 2 and respuesta_correcta:
                 respuestas_finales = []
                 for idx, texto_r in enumerate(respuestas):
                     letra = letras[idx] if idx < len(letras) else ""
