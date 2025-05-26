@@ -10,45 +10,49 @@ TIPO_PREGUNTA = "radio"
 
 def cargar_documento(file):
     doc = docx.Document(file)
-    return [p.text.strip() for p in doc.paragraphs if p.text.strip() != ""]
+    return [p for p in doc.paragraphs if p.text.strip() != ""]
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
+    letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
-        texto = parrafos[i]
+        texto = parrafos[i].text.strip()
         if len(texto.split()) > 3:
             pregunta = texto
             respuestas = []
             explicacion = ""
-            respuesta_correcta_letra = ""
+            respuesta_correcta_texto = ""
             i += 1
             # Recogemos hasta 4 respuestas
             while i < len(parrafos) and len(respuestas) < 4:
-                line = parrafos[i].strip()
+                line = parrafos[i].text.strip()
                 if line and not line.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
                     respuestas.append(line)
                 i += 1
             # Buscamos la respuesta correcta y la explicación (aunque haya saltos o líneas vacías entre medias)
             while i < len(parrafos):
-                line = parrafos[i].strip().lower()
-                if "respuesta correcta" in line:
-                    match = re.search(r"[a-d]", line)
+                line_lower = parrafos[i].text.strip().lower()
+                if "respuesta correcta" in line_lower:
+                    match = re.search(r"[a-d]", line_lower)
                     if match:
-                        respuesta_correcta_letra = match.group(0).lower()
+                        idx = ord(match.group(0)) - ord('a')
+                        if 0 <= idx < len(respuestas):
+                            respuesta_correcta_texto = respuestas[idx]
                     i += 1
-                elif "explicación correcta" in line or "explicacion correcta" in line:
-                    explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", parrafos[i], flags=re.IGNORECASE).strip()
+                elif "explicación correcta" in line_lower or "explicacion correcta" in line_lower:
+                    explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", parrafos[i].text.strip(), flags=re.IGNORECASE).strip()
                     i += 1
                     break
                 else:
                     i += 1
-            # Vinculamos la respuesta correcta con el texto real
-            respuestas_finales = [(texto_r, texto_r == respuesta_correcta) for texto_r in respuestas]
-            preguntas.append({
-                "pregunta": pregunta,
-                "respuestas": respuestas_finales,
-                "explicacion": explicacion or EXPLICACION_TEXTO
+            # Vinculamos la respuesta correcta comparando minúsculas y sin espacios
+            respuestas_finales = [(texto_r, texto_r.strip().lower() == respuesta_correcta_texto.strip().lower()) for texto_r in respuestas]
+            if len(respuestas_finales) >= 2:
+                preguntas.append({
+                    "pregunta": pregunta,
+                    "respuestas": respuestas_finales,
+                    "explicacion": explicacion or EXPLICACION_TEXTO
                 })
         else:
             i += 1
@@ -125,3 +129,4 @@ if uploaded_file:
             )
         except Exception as e:
             st.error(f"Ocurrió un error: {e}")
+
