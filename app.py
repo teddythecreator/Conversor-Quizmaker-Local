@@ -1,3 +1,6 @@
+# Conversor DOCX a XLSX para Quiz Maker (WordPress Plugin) - Versión Streamlit
+# Autor: Tedi One - Nexo de Negocios Digitales
+
 import docx
 import pandas as pd
 import streamlit as st
@@ -15,13 +18,14 @@ def cargar_documento(file):
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
+    letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
         texto = parrafos[i].text.strip()
         if len(texto.split()) > 3 and texto.endswith("?"):
             pregunta = texto
             respuestas = []
             explicacion = ""
-            respuesta_correcta_texto = ""
+            respuesta_correcta = ""
             i += 1
             while i < len(parrafos):
                 line = parrafos[i].text.strip()
@@ -31,11 +35,10 @@ def extraer_preguntas_y_respuestas(parrafos):
                         letra_idx = respuesta_correcta_line.split(":")[-1].strip().lower()
                         idx = ord(letra_idx) - ord('a')
                         if 0 <= idx < len(respuestas):
-                            # ✅ Asignamos la respuesta correcta real, normalizando
-                            respuesta_correcta_texto = respuestas[idx].strip().lower()
+                            respuesta_correcta = respuestas[idx]
                     i += 1
-                elif line.lower().startswith("explicación correcta") or line.lower().startswith("explicacion correcta"):
-                    explicacion = re.sub("explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
+                elif line.lower().startswith("explicación correcta"):
+                    explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
                     i += 1
                     break
                 elif line == "":
@@ -44,11 +47,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                 else:
                     respuestas.append(line)
                     i += 1
-            # 🔥 Vinculamos la respuesta correcta comparando texto real, normalizado
-            respuestas_finales = []
-            for r in respuestas:
-                es_correcta = r.strip().lower() == respuesta_correcta_texto
-                respuestas_finales.append((r, es_correcta))
+            respuestas_finales = [(texto_r, texto_r == respuesta_correcta) for texto_r in respuestas]
             preguntas.append({
                 "pregunta": pregunta,
                 "respuestas": respuestas_finales,
@@ -110,9 +109,8 @@ def convertir_y_descargar(uploaded_file):
     buffer.seek(0)
     return buffer
 
-# === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Final y 100%)")
-st.markdown("Sube tu archivo .docx con preguntas y descarga el archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
+st.title("Conversor DOCX a XLSX - Quiz Maker (Formato Avanzado)")
+st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
 
