@@ -1,4 +1,4 @@
-# Conversor DOCX a XLSX para Quiz Maker (WordPress Plugin) - Versión Final
+# Conversor DOCX a XLSX para Quiz Maker (WordPress Plugin) - Versión Final con Tecnologías Reforzadas
 # Autor: Tedi One - Nexo de Negocios Digitales
 
 import docx
@@ -7,50 +7,65 @@ import streamlit as st
 from io import BytesIO
 import json
 import re
+import unicodedata
+import mammoth
+from bs4 import BeautifulSoup
 
 EXPLICACION_TEXTO = "Por favor revisa la explicación de la respuesta para entender mejor el tema abordado."
 TIPO_PREGUNTA = "radio"
 
-def cargar_documento(file):
-    doc = docx.Document(file)
-    return [p for p in doc.paragraphs if p.text.strip() != ""]
+def normalizar_texto(texto):
+    if texto is None:
+        return ""
+    texto = unicodedata.normalize("NFKD", texto).encode("ASCII", "ignore").decode("ASCII")
+    return texto.lower().strip()
 
-def extraer_preguntas_y_respuestas(parrafos):
+def cargar_documento(file):
+    # Usamos mammoth para convertir a HTML y BeautifulSoup para parsear
+    result = mammoth.convert_to_html(file)
+    html = result.value
+    soup = BeautifulSoup(html, "html.parser")
+    lines = [p.get_text(strip=True) for p in soup.find_all(["p", "li"]) if p.get_text(strip=True)]
+    return lines
+
+def extraer_preguntas_y_respuestas(lines):
     preguntas = []
     i = 0
-    while i < len(parrafos):
-        texto = parrafos[i].text.strip()
-        # 🔥 Cambiado para detectar preguntas aunque no terminen en "?"
+    while i < len(lines):
+        texto = lines[i]
         if len(texto.split()) > 3:
             pregunta = texto
             respuestas = []
             explicacion = ""
             respuesta_correcta = ""
             i += 1
-            while i < len(parrafos):
-                line = parrafos[i].text.strip()
+            while i < len(lines):
+                line = lines[i]
                 if line.lower().startswith("respuesta correcta"):
-                    respuesta_correcta_line = parrafos[i].text.strip()
-                    if respuesta_correcta_line.lower().startswith("respuesta correcta"):
-                        letra_idx = respuesta_correcta_line.split(":")[-1].strip().lower()
+                    respuesta_correcta_line = normalizar_texto(line)
+                    letra_idx = respuesta_correcta_line.split(":")[-1].strip()
+                    # 🔥 Validación reforzada
+                    if letra_idx and len(letra_idx) == 1 and letra_idx in "abcd":
                         idx = ord(letra_idx) - ord('a')
                         if 0 <= idx < len(respuestas):
-                            respuesta_correcta = respuestas[idx].strip().lower()
+                            respuesta_correcta = normalizar_texto(respuestas[idx])
+                        else:
+                            respuesta_correcta = ""
+                    else:
+                        respuesta_correcta = ""
                     i += 1
                 elif line.lower().startswith("explicación correcta") or line.lower().startswith("explicacion correcta"):
-                    explicacion = re.sub("explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
+                    explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
                     i += 1
                     break
-                elif line == "":
-                    i += 1
-                    continue
                 else:
-                    respuestas.append(line)
+                    if line:
+                        respuestas.append(line)
                     i += 1
-            # 🔥 Vinculamos respuesta correcta sin depender de mayúsculas/minúsculas
+            # 🔥 Vinculamos la respuesta correcta usando texto normalizado
             respuestas_finales = []
             for r in respuestas:
-                es_correcta = r.strip().lower() == respuesta_correcta
+                es_correcta = normalizar_texto(r) == respuesta_correcta
                 respuestas_finales.append((r, es_correcta))
             if len(respuestas_finales) >= 2:
                 preguntas.append({
@@ -104,8 +119,8 @@ def construir_estructura_xlsx(preguntas):
     return pd.DataFrame(data)
 
 def convertir_y_descargar(uploaded_file):
-    parrafos = cargar_documento(uploaded_file)
-    preguntas = extraer_preguntas_y_respuestas(parrafos)
+    lines = cargar_documento(uploaded_file)
+    preguntas = extraer_preguntas_y_respuestas(lines)
     if not preguntas:
         raise ValueError("No se encontraron preguntas válidas en el archivo.")
     df = construir_estructura_xlsx(preguntas)
@@ -114,6 +129,7 @@ def convertir_y_descargar(uploaded_file):
     buffer.seek(0)
     return buffer
 
+# === INTERFAZ STREAMLIT ===
 st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Final y 100%)")
 st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
 
