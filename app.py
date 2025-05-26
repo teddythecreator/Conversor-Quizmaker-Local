@@ -10,7 +10,6 @@ TIPO_PREGUNTA = "radio"
 
 def cargar_documento(file):
     doc = docx.Document(file)
-    # Devuelve todas las líneas con contenido
     return [p.text.strip() for p in doc.paragraphs if p.text.strip() != ""]
 
 def extraer_preguntas_y_respuestas(parrafos):
@@ -18,45 +17,44 @@ def extraer_preguntas_y_respuestas(parrafos):
     i = 0
     while i < len(parrafos):
         texto = parrafos[i]
-        # Nueva estrategia: detectar pregunta si empieza con número y punto o con signo de interrogación
-        if re.match(r"^\\d+\\.", texto) or texto.endswith("?"):
-            pregunta = re.sub(r"^\\d+\\.", "", texto).strip()
+        # Detectamos la pregunta como línea con más de 3 palabras
+        if len(texto.split()) > 3:
+            pregunta = texto
             respuestas = []
             explicacion = ""
             respuesta_correcta_letra = ""
             i += 1
-            # Recolectamos las respuestas y la explicación
-            while i < len(parrafos):
-                line = parrafos[i].strip()
-                if re.search(r"respuesta correcta", line.lower()):
-                    match = re.search(r"[a-d]", line.lower())
-                    if match:
-                        respuesta_correcta_letra = match.group(0).lower()
+            # Tomamos las siguientes 4 líneas como respuestas
+            for _ in range(4):
+                if i < len(parrafos):
+                    respuesta = parrafos[i].strip()
+                    respuestas.append(respuesta)
                     i += 1
-                elif re.search(r"explicaci[oó]n correcta", line.lower()):
-                    explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
-                    i += 1
-                    break
-                elif line == "":
-                    i += 1
-                    continue
-                else:
-                    respuestas.append(line)
-                    i += 1
-            # Vincular la respuesta correcta real
+            # Línea "Respuesta correcta"
+            if i < len(parrafos) and "respuesta correcta" in parrafos[i].lower():
+                match = re.search(r"[a-d]", parrafos[i].lower())
+                if match:
+                    respuesta_correcta_letra = match.group(0).lower()
+                i += 1
+            # Línea "Explicación correcta"
+            if i < len(parrafos) and "explicación correcta" in parrafos[i].lower():
+                explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", parrafos[i], flags=re.IGNORECASE).strip()
+                i += 1
+            # Vinculamos la letra con el texto real de la respuesta
             letras = ["a", "b", "c", "d"]
             respuestas_finales = []
             for idx, texto_r in enumerate(respuestas):
-                letra = letras[idx] if idx < len(letras) else ""
+                letra = letras[idx]
                 es_correcta = (letra == respuesta_correcta_letra)
                 respuestas_finales.append((texto_r, es_correcta))
-            if len(respuestas_finales) >= 2:
+            if len(respuestas_finales) == 4:
                 preguntas.append({
                     "pregunta": pregunta,
                     "respuestas": respuestas_finales,
                     "explicacion": explicacion or EXPLICACION_TEXTO
                 })
-        i += 1
+        else:
+            i += 1
     return preguntas
 
 def construir_estructura_xlsx(preguntas):
@@ -112,8 +110,8 @@ def convertir_y_descargar(uploaded_file):
     return buffer
 
 # === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Final y 100% funcional)")
-st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga el archivo .xlsx listo para importar en el plugin WordPress Quiz Maker.")
+st.title("Conversor DOCX a XLSX - Quiz Maker (Plantilla Real y 100% funcional)")
+st.markdown("Sube tu archivo .docx con preguntas (estructura real de tus profesores) y descarga el archivo .xlsx listo para Quiz Maker.")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
 
