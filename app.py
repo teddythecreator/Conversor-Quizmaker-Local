@@ -15,22 +15,22 @@ def cargar_documento(file):
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
-    letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
         texto = parrafos[i]
+        # Detecta la pregunta (línea no vacía y que no sea respuesta o explicación)
         if texto and not texto.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
             pregunta = texto
             respuestas = []
             explicacion = ""
             respuesta_correcta_letra = ""
             i += 1
-            # Recogemos las 4 respuestas REALES
+            # Recoge las 4 respuestas reales (saltando líneas vacías o sin sentido)
             while i < len(parrafos) and len(respuestas) < 4:
                 line = parrafos[i].strip()
                 if line and not line.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
                     respuestas.append(line)
                 i += 1
-            # Buscamos la respuesta correcta y la explicación
+            # Busca la respuesta correcta y la explicación
             while i < len(parrafos):
                 line_lower = parrafos[i].strip().lower()
                 if "respuesta correcta" in line_lower:
@@ -44,14 +44,12 @@ def extraer_preguntas_y_respuestas(parrafos):
                     break
                 else:
                     i += 1
-            # 🔥 Aquí asignamos la respuesta correcta real según la letra
-            respuesta_correcta = ""
-            if respuesta_correcta_letra:
-                idx = ord(respuesta_correcta_letra) - ord('a')
-                if 0 <= idx < len(respuestas):
-                    respuesta_correcta = respuestas[idx]
-            # Vinculamos la respuesta correcta comparando minúsculas y sin espacios
-            respuestas_finales = [(texto_r, texto_r.strip().lower() == respuesta_correcta.strip().lower()) for texto_r in respuestas]
+            # Asigna la respuesta correcta según la letra y el índice
+            respuestas_finales = []
+            idx_correcta = ord(respuesta_correcta_letra) - ord('a') if respuesta_correcta_letra else -1
+            for idx, texto_r in enumerate(respuestas):
+                es_correcta = idx == idx_correcta
+                respuestas_finales.append((texto_r, es_correcta))
             if len(respuestas_finales) >= 2:
                 preguntas.append({
                     "pregunta": pregunta,
@@ -115,7 +113,7 @@ def convertir_y_descargar(uploaded_file):
     return buffer
 
 # === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Flexible y Final)")
+st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Final y 100%)")
 st.markdown("Sube tu archivo .docx con preguntas y descarga el archivo .xlsx listo para importar en el plugin WordPress Quiz Maker.")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
