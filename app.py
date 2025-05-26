@@ -59,33 +59,34 @@ def detectar_explicacion(parrafos, start_idx):
     return EXPLICACION_TEXTO
 
 def extraer_preguntas_completas(parrafos):
-    bloques = detectar_preguntas(parrafos)
-    preguntas_completas = []
-
-    for bloque in bloques:
-        pregunta = bloque["pregunta"]
-        respuestas = bloque["respuestas"]
-        start_idx = bloque["indice"]
-
-        letra_correcta = detectar_respuesta_correcta(parrafos, start_idx)
-        idx_correcta = ord(letra_correcta) - ord('a') if letra_correcta else -1
-
-        explicacion = detectar_explicacion(parrafos, start_idx)
-
-        # Vinculamos la respuesta correcta real según la letra
-        respuestas_finales = []
-        for idx, texto in enumerate(respuestas):
-            es_correcta = idx == idx_correcta
-            respuestas_finales.append((texto, es_correcta))
-
-        if len(respuestas_finales) >= 2:
-            preguntas_completas.append({
-                "pregunta": pregunta,
-                "respuestas": respuestas_finales,
-                "explicacion": explicacion
-            })
-
-    return preguntas_completas
+    preguntas = []
+    i = 0
+    while i < len(parrafos):
+        texto = parrafos[i]
+        if texto and not texto.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
+            pregunta = texto
+            respuestas = []
+            i += 1
+            while i < len(parrafos) and len(respuestas) < 4:
+                line = parrafos[i].strip()
+                if line and not line.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
+                    respuestas.append(line)
+                i += 1
+            # 🔥 Usamos tu fórmula exacta para la respuesta correcta
+            respuesta_correcta = detectar_respuesta_correcta(parrafos, i, respuestas)
+            # Buscamos la explicación
+            explicacion = detectar_explicacion(parrafos, i)
+            # Vinculamos
+            respuestas_finales = [(r, r.strip().lower() == respuesta_correcta.strip().lower()) for r in respuestas]
+            if len(respuestas_finales) >= 2:
+                preguntas.append({
+                    "pregunta": pregunta,
+                    "respuestas": respuestas_finales,
+                    "explicacion": explicacion or EXPLICACION_TEXTO
+                })
+        else:
+            i += 1
+    return preguntas
 
 def construir_estructura_xlsx(preguntas):
     data = []
