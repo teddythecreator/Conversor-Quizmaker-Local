@@ -10,44 +10,42 @@ TIPO_PREGUNTA = "radio"
 
 def cargar_documento(file):
     doc = docx.Document(file)
-    return [p.text.strip() for p in doc.paragraphs if p.text.strip() != ""]
+    return [p for p in doc.paragraphs if p.text.strip() != ""]
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
     letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
-        texto = parrafos[i]
+        texto = parrafos[i].text.strip()
+        # Permitimos detectar la pregunta si tiene más de 3 palabras
         if len(texto.split()) > 3:
             pregunta = texto
             respuestas = []
             explicacion = ""
-            respuesta_correcta_texto = ""
+            respuesta_correcta = ""
             i += 1
-            # Recogemos hasta 4 respuestas
-            while i < len(parrafos) and len(respuestas) < 4:
-                line = parrafos[i].strip()
-                if line and not line.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
-                    respuestas.append(line)
-                i += 1
-            # Buscamos la respuesta correcta y la explicación
             while i < len(parrafos):
-                line = parrafos[i].strip().lower()
-                if "respuesta correcta" in line:
-                    match = re.search(r"[a-d]", line)
-                    if match:
-                        idx = ord(match.group(0).lower()) - ord('a')
+                line = parrafos[i].text.strip()
+                if line.lower().startswith("respuesta correcta"):
+                    respuesta_correcta_line = parrafos[i].text.strip()
+                    if respuesta_correcta_line.lower().startswith("respuesta correcta"):
+                        letra_idx = respuesta_correcta_line.split(":")[-1].strip().lower()
+                        idx = ord(letra_idx) - ord('a')
                         if 0 <= idx < len(respuestas):
-                            respuesta_correcta_texto = respuestas[idx]
+                            respuesta_correcta = respuestas[idx]
                     i += 1
-                elif "explicación correcta" in line or "explicacion correcta" in line:
-                    explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", parrafos[i], flags=re.IGNORECASE).strip()
+                elif line.lower().startswith("explicación correcta") or line.lower().startswith("explicacion correcta"):
+                    explicacion = re.sub("explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
                     i += 1
                     break
-                else:
+                elif line == "":
                     i += 1
-            # Vinculamos la respuesta correcta comparando con el texto real
-            respuestas_finales = [(texto_r, texto_r == respuesta_correcta_texto) for texto_r in respuestas]
+                    continue
+                else:
+                    respuestas.append(line)
+                    i += 1
+            respuestas_finales = [(texto_r, texto_r == respuesta_correcta) for texto_r in respuestas]
             if len(respuestas_finales) >= 2:
                 preguntas.append({
                     "pregunta": pregunta,
@@ -111,7 +109,7 @@ def convertir_y_descargar(uploaded_file):
     return buffer
 
 # === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Final y 100%)")
+st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Flexible y Final)")
 st.markdown("Sube tu archivo .docx con preguntas y descarga el archivo .xlsx listo para importar en Quiz Maker.")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
