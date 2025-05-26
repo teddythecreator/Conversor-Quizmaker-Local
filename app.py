@@ -21,7 +21,7 @@ def extraer_preguntas_y_respuestas(parrafos):
             pregunta = texto
             respuestas = []
             explicacion = ""
-            respuesta_correcta = ""
+            respuesta_correcta_texto = ""
             i += 1
             while i < len(parrafos):
                 line = parrafos[i].text.strip()
@@ -31,11 +31,11 @@ def extraer_preguntas_y_respuestas(parrafos):
                         letra_idx = respuesta_correcta_line.split(":")[-1].strip().lower()
                         idx = ord(letra_idx) - ord('a')
                         if 0 <= idx < len(respuestas):
-                            # ✅ Asignamos la respuesta correcta real normalizada
-                            respuesta_correcta = respuestas[idx].strip().lower()
+                            # ✅ Asignamos la respuesta correcta real, normalizando
+                            respuesta_correcta_texto = respuestas[idx].strip().lower()
                     i += 1
-                elif line.lower().startswith("explicación correcta"):
-                    explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
+                elif line.lower().startswith("explicación correcta") or line.lower().startswith("explicacion correcta"):
+                    explicacion = re.sub("explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
                     i += 1
                     break
                 elif line == "":
@@ -44,10 +44,10 @@ def extraer_preguntas_y_respuestas(parrafos):
                 else:
                     respuestas.append(line)
                     i += 1
-            # ✅ Marcamos la respuesta correcta real
+            # 🔥 Vinculamos la respuesta correcta comparando texto real, normalizado
             respuestas_finales = []
             for r in respuestas:
-                es_correcta = r.strip().lower() == respuesta_correcta
+                es_correcta = r.strip().lower() == respuesta_correcta_texto
                 respuestas_finales.append((r, es_correcta))
             preguntas.append({
                 "pregunta": pregunta,
@@ -112,7 +112,7 @@ def convertir_y_descargar(uploaded_file):
 
 # === INTERFAZ STREAMLIT ===
 st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Final y 100%)")
-st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
+st.markdown("Sube tu archivo .docx con preguntas y descarga el archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
 
