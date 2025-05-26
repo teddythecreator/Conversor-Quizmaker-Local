@@ -1,4 +1,4 @@
-# Conversor DOCX a XLSX para Quiz Maker (WordPress Plugin) - Versión Final con Tecnologías Reforzadas
+# Conversor DOCX a XLSX para Quiz Maker (WordPress Plugin) - Versión Final y Flexible
 # Autor: Tedi One - Nexo de Negocios Digitales
 
 import docx
@@ -21,7 +21,6 @@ def normalizar_texto(texto):
     return texto.lower().strip()
 
 def cargar_documento(file):
-    # Usamos mammoth para convertir a HTML y BeautifulSoup para parsear
     result = mammoth.convert_to_html(file)
     html = result.value
     soup = BeautifulSoup(html, "html.parser")
@@ -33,18 +32,49 @@ def extraer_preguntas_y_respuestas(lines):
     i = 0
     while i < len(lines):
         texto = lines[i]
+        # 🔥 Detectamos si hay respuestas integradas en el enunciado
         if len(texto.split()) > 3:
             pregunta = texto
             respuestas = []
             explicacion = ""
             respuesta_correcta = ""
-            i += 1
+            # Separar respuestas si están en la misma línea
+            if re.search(r"\?\s*[^:]*:\s*", texto):
+                partes = re.split(r":\s*", texto, maxsplit=1)
+                pregunta = partes[0] + "?"
+                respuestas_str = partes[1]
+                respuestas = [r.strip() for r in re.split(r"\.\s*", respuestas_str) if r.strip()]
+                i += 1
+            else:
+                i += 1
+                while i < len(lines):
+                    line = lines[i]
+                    if line.lower().startswith("respuesta correcta"):
+                        respuesta_correcta_line = normalizar_texto(line)
+                        letra_idx = respuesta_correcta_line.split(":")[-1].strip()
+                        if letra_idx and len(letra_idx) == 1 and letra_idx in "abcd":
+                            idx = ord(letra_idx) - ord('a')
+                            if 0 <= idx < len(respuestas):
+                                respuesta_correcta = normalizar_texto(respuestas[idx])
+                            else:
+                                respuesta_correcta = ""
+                        else:
+                            respuesta_correcta = ""
+                        i += 1
+                    elif line.lower().startswith("explicación correcta") or line.lower().startswith("explicacion correcta"):
+                        explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
+                        i += 1
+                        break
+                    else:
+                        if line:
+                            respuestas.append(line)
+                        i += 1
+            # Si la respuesta correcta no se detectó en este paso, la buscamos después
             while i < len(lines):
                 line = lines[i]
                 if line.lower().startswith("respuesta correcta"):
                     respuesta_correcta_line = normalizar_texto(line)
                     letra_idx = respuesta_correcta_line.split(":")[-1].strip()
-                    # 🔥 Validación reforzada
                     if letra_idx and len(letra_idx) == 1 and letra_idx in "abcd":
                         idx = ord(letra_idx) - ord('a')
                         if 0 <= idx < len(respuestas):
@@ -59,10 +89,8 @@ def extraer_preguntas_y_respuestas(lines):
                     i += 1
                     break
                 else:
-                    if line:
-                        respuestas.append(line)
                     i += 1
-            # 🔥 Vinculamos la respuesta correcta usando texto normalizado
+            # 🔥 Vinculamos la respuesta correcta normalizada
             respuestas_finales = []
             for r in respuestas:
                 es_correcta = normalizar_texto(r) == respuesta_correcta
