@@ -18,10 +18,10 @@ def cargar_documento(file):
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
+    letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
         texto = parrafos[i].text.strip()
-        # 🔥 Cambiado para detectar preguntas aunque no terminen en "?"
-        if len(texto.split()) > 3:
+        if len(texto.split()) > 3 and texto.endswith("?"):
             pregunta = texto
             respuestas = []
             explicacion = ""
@@ -29,16 +29,20 @@ def extraer_preguntas_y_respuestas(parrafos):
             i += 1
             while i < len(parrafos):
                 line = parrafos[i].text.strip()
+                # 🔥 Ajuste final con normalización de la línea de respuesta correcta
                 if line.lower().startswith("respuesta correcta"):
-                    respuesta_correcta_line = parrafos[i].text.strip()
+                    respuesta_correcta_line = parrafos[i].text.replace("\u00A0", " ").strip()
                     if respuesta_correcta_line.lower().startswith("respuesta correcta"):
                         letra_idx = respuesta_correcta_line.split(":")[-1].strip().lower()
-                        idx = ord(letra_idx) - ord('a')
-                        if 0 <= idx < len(respuestas):
-                            respuesta_correcta = respuestas[idx].strip().lower()
+                        if letra_idx and len(letra_idx) == 1 and letra_idx in ["a", "b", "c", "d"]:
+                            idx = ord(letra_idx) - ord('a')
+                            if 0 <= idx < len(respuestas):
+                                respuesta_correcta = respuestas[idx].strip().lower()
+                        else:
+                            respuesta_correcta = ""
                     i += 1
-                elif line.lower().startswith("explicación correcta") or line.lower().startswith("explicacion correcta"):
-                    explicacion = re.sub("explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
+                elif line.lower().startswith("explicación correcta"):
+                    explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
                     i += 1
                     break
                 elif line == "":
@@ -47,17 +51,16 @@ def extraer_preguntas_y_respuestas(parrafos):
                 else:
                     respuestas.append(line)
                     i += 1
-            # 🔥 Vinculamos respuesta correcta sin depender de mayúsculas/minúsculas
+            # 🔥 Vinculamos la respuesta correcta comparando texto real normalizado
             respuestas_finales = []
             for r in respuestas:
                 es_correcta = r.strip().lower() == respuesta_correcta
                 respuestas_finales.append((r, es_correcta))
-            if len(respuestas_finales) >= 2:
-                preguntas.append({
-                    "pregunta": pregunta,
-                    "respuestas": respuestas_finales,
-                    "explicacion": explicacion or EXPLICACION_TEXTO
-                })
+            preguntas.append({
+                "pregunta": pregunta,
+                "respuestas": respuestas_finales,
+                "explicacion": explicacion or EXPLICACION_TEXTO
+            })
         else:
             i += 1
     return preguntas
@@ -114,7 +117,8 @@ def convertir_y_descargar(uploaded_file):
     buffer.seek(0)
     return buffer
 
-st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Final y 100%)")
+# === INTERFAZ STREAMLIT ===
+st.title("Conversor DOCX a XLSX - Quiz Maker (Formato Final y 100%)")
 st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
