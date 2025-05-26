@@ -17,37 +17,40 @@ def extraer_preguntas_y_respuestas(parrafos):
     i = 0
     while i < len(parrafos):
         texto = parrafos[i]
-        # Detectamos la pregunta como línea con más de 3 palabras
         if len(texto.split()) > 3:
             pregunta = texto
             respuestas = []
             explicacion = ""
             respuesta_correcta_letra = ""
             i += 1
-            # Tomamos las siguientes 4 líneas como respuestas
-            for _ in range(4):
-                if i < len(parrafos):
-                    respuesta = parrafos[i].strip()
-                    respuestas.append(respuesta)
+            # Recogemos hasta 4 respuestas
+            while i < len(parrafos) and len(respuestas) < 4:
+                line = parrafos[i].strip()
+                if line and not line.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
+                    respuestas.append(line)
+                i += 1
+            # Buscamos la respuesta correcta y la explicación (aunque haya saltos o líneas vacías entre medias)
+            while i < len(parrafos):
+                line = parrafos[i].strip().lower()
+                if "respuesta correcta" in line:
+                    match = re.search(r"[a-d]", line)
+                    if match:
+                        respuesta_correcta_letra = match.group(0).lower()
                     i += 1
-            # Línea "Respuesta correcta"
-            if i < len(parrafos) and "respuesta correcta" in parrafos[i].lower():
-                match = re.search(r"[a-d]", parrafos[i].lower())
-                if match:
-                    respuesta_correcta_letra = match.group(0).lower()
-                i += 1
-            # Línea "Explicación correcta"
-            if i < len(parrafos) and "explicación correcta" in parrafos[i].lower():
-                explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", parrafos[i], flags=re.IGNORECASE).strip()
-                i += 1
-            # Vinculamos la letra con el texto real de la respuesta
+                elif "explicación correcta" in line or "explicacion correcta" in line:
+                    explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", parrafos[i], flags=re.IGNORECASE).strip()
+                    i += 1
+                    break
+                else:
+                    i += 1
+            # Vinculamos la respuesta correcta con el texto real
             letras = ["a", "b", "c", "d"]
             respuestas_finales = []
             for idx, texto_r in enumerate(respuestas):
-                letra = letras[idx]
+                letra = letras[idx] if idx < len(letras) else ""
                 es_correcta = (letra == respuesta_correcta_letra)
                 respuestas_finales.append((texto_r, es_correcta))
-            if len(respuestas_finales) == 4:
+            if len(respuestas_finales) >= 2:
                 preguntas.append({
                     "pregunta": pregunta,
                     "respuestas": respuestas_finales,
@@ -110,8 +113,8 @@ def convertir_y_descargar(uploaded_file):
     return buffer
 
 # === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Plantilla Real y 100% funcional)")
-st.markdown("Sube tu archivo .docx con preguntas (estructura real de tus profesores) y descarga el archivo .xlsx listo para Quiz Maker.")
+st.title("Conversor DOCX a XLSX - Quiz Maker (Plantilla Final y 100%)")
+st.markdown("Sube tu archivo .docx con preguntas y descarga el archivo .xlsx listo para importar en Quiz Maker.")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
 
