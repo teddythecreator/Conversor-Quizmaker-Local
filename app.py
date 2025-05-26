@@ -10,80 +10,50 @@ TIPO_PREGUNTA = "radio"
 
 def cargar_documento(file):
     doc = docx.Document(file)
-    return [p.text.strip() for p in doc.paragraphs if p.text.strip() != ""]
+    return [p for p in doc.paragraphs if p.text.strip() != ""]
 
-def detectar_preguntas(parrafos):
-    bloques = []
-    i = 0
-    while i < len(parrafos):
-        texto = parrafos[i]
-        if texto and not texto.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
-            pregunta = texto
-            respuestas = []
-            i += 1
-            while i < len(parrafos) and len(respuestas) < 4:
-                line = parrafos[i].strip()
-                if line and not line.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
-                    respuestas.append(line)
-                i += 1
-            bloques.append({
-                "pregunta": pregunta,
-                "respuestas": respuestas,
-                "indice": i  # Para continuar buscando desde aquí
-            })
-        else:
-            i += 1
-    return bloques
-
-def detectar_respuesta_correcta(parrafos, start_idx):
-    respuesta_letra = ""
-    i = start_idx
-    while i < len(parrafos):
-        line = parrafos[i].lower()
-        if "respuesta correcta" in line:
-            match = re.search(r"[a-d]", line)
-            if match:
-                respuesta_letra = match.group(0).lower()
-            break
-        i += 1
-    return respuesta_letra
-
-def detectar_explicacion(parrafos, start_idx):
-    i = start_idx
-    while i < len(parrafos):
-        line = parrafos[i].lower()
-        if "explicación correcta" in line or "explicacion correcta" in line:
-            explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", parrafos[i], flags=re.IGNORECASE).strip()
-            return explicacion
-        i += 1
-    return EXPLICACION_TEXTO
-
-def extraer_preguntas_completas(parrafos):
+def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
     while i < len(parrafos):
-        texto = parrafos[i]
-        if texto and not texto.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
+        texto = parrafos[i].text.strip()
+        if len(texto.split()) > 3 and texto.endswith("?"):
             pregunta = texto
             respuestas = []
+            explicacion = ""
+            respuesta_correcta = ""
             i += 1
-            while i < len(parrafos) and len(respuestas) < 4:
-                line = parrafos[i].strip()
-                if line and not line.lower().startswith(("respuesta correcta", "explicación correcta", "explicacion correcta")):
+            while i < len(parrafos):
+                line = parrafos[i].text.strip()
+                if line.lower().startswith("respuesta correcta"):
+                    respuesta_correcta_line = parrafos[i].text.strip()
+                    if respuesta_correcta_line.lower().startswith("respuesta correcta"):
+                        letra_idx = respuesta_correcta_line.split(":")[-1].strip().lower()
+                        idx = ord(letra_idx) - ord('a')
+                        if 0 <= idx < len(respuestas):
+                            # ✅ Asignamos la respuesta correcta real normalizada
+                            respuesta_correcta = respuestas[idx].strip().lower()
+                    i += 1
+                elif line.lower().startswith("explicación correcta"):
+                    explicacion = re.sub("explicación correcta[:]*", "", line, flags=re.IGNORECASE).strip()
+                    i += 1
+                    break
+                elif line == "":
+                    i += 1
+                    continue
+                else:
                     respuestas.append(line)
-                i += 1
-            # 🔥 Usamos tu fórmula exacta para la respuesta correcta
-            respuesta_correcta = detectar_respuesta_correcta(parrafos, i, respuestas)
-            # Buscamos la explicación
-            explicacion = detectar_explicacion(parrafos, i)
-            # Vinculamos
-            respuestas_finales = [(r, r.strip().lower() == respuesta_correcta.strip().lower()) for r in respuestas]
-            if len(respuestas_finales) >= 2:
-                preguntas.append({
-                    "pregunta": pregunta,
-                    "respuestas": respuestas_finales,
-                    "explicacion": explicacion or EXPLICACION_TEXTO
-                })
+                    i += 1
+            # ✅ Marcamos la respuesta correcta real
+            respuestas_finales = []
+            for r in respuestas:
+                es_correcta = r.strip().lower() == respuesta_correcta
+                respuestas_finales.append((r, es_correcta))
+            preguntas.append({
+                "pregunta": pregunta,
+                "respuestas": respuestas_finales,
+                "explicacion": explicacion or EXPLICACION_TEXTO
+            })
         else:
             i += 1
     return preguntas
@@ -131,7 +101,7 @@ def construir_estructura_xlsx(preguntas):
 
 def convertir_y_descargar(uploaded_file):
     parrafos = cargar_documento(uploaded_file)
-    preguntas = extraer_preguntas_completas(parrafos)
+    preguntas = extraer_preguntas_y_respuestas(parrafos)
     if not preguntas:
         raise ValueError("No se encontraron preguntas válidas en el archivo.")
     df = construir_estructura_xlsx(preguntas)
@@ -141,8 +111,8 @@ def convertir_y_descargar(uploaded_file):
     return buffer
 
 # === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Modular y 100%)")
-st.markdown("Sube tu archivo .docx con preguntas y descarga el archivo .xlsx listo para importar en el plugin WordPress Quiz Maker.")
+st.title("Conversor DOCX a XLSX - Quiz Maker (Versión Final y 100%)")
+st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker (formato completo).")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
 
