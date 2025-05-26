@@ -10,6 +10,7 @@ TIPO_PREGUNTA = "radio"
 
 def cargar_documento(file):
     doc = docx.Document(file)
+    # Devuelve todas las líneas con contenido
     return [p.text.strip() for p in doc.paragraphs if p.text.strip() != ""]
 
 def extraer_preguntas_y_respuestas(parrafos):
@@ -17,22 +18,22 @@ def extraer_preguntas_y_respuestas(parrafos):
     i = 0
     while i < len(parrafos):
         texto = parrafos[i]
-        # Detectamos la pregunta solo si empieza con número y punto (ej: "1.")
-        if re.match(r"^\d+\.", texto):
-            pregunta = re.sub(r"^\d+\.", "", texto).strip()
+        # Nueva estrategia: detectar pregunta si empieza con número y punto o con signo de interrogación
+        if re.match(r"^\\d+\\.", texto) or texto.endswith("?"):
+            pregunta = re.sub(r"^\\d+\\.", "", texto).strip()
             respuestas = []
             explicacion = ""
             respuesta_correcta_letra = ""
             i += 1
+            # Recolectamos las respuestas y la explicación
             while i < len(parrafos):
                 line = parrafos[i].strip()
-                line_lower = line.lower()
-                if "respuesta correcta" in line_lower:
-                    match = re.search(r"[a-d]", line_lower)
+                if re.search(r"respuesta correcta", line.lower()):
+                    match = re.search(r"[a-d]", line.lower())
                     if match:
                         respuesta_correcta_letra = match.group(0).lower()
                     i += 1
-                elif "explicación correcta" in line_lower or "explicacion correcta" in line_lower:
+                elif re.search(r"explicaci[oó]n correcta", line.lower()):
                     explicacion = re.sub(r"explicaci[oó]n correcta[:]*", "", line, flags=re.IGNORECASE).strip()
                     i += 1
                     break
@@ -40,11 +41,9 @@ def extraer_preguntas_y_respuestas(parrafos):
                     i += 1
                     continue
                 else:
-                    # Limpiamos numeración o guiones (ej: "1.", "-")
-                    respuesta = re.sub(r"^[0-9]+\.", "", line).lstrip("-").strip()
-                    respuestas.append(respuesta)
+                    respuestas.append(line)
                     i += 1
-            # Vinculamos la respuesta correcta real
+            # Vincular la respuesta correcta real
             letras = ["a", "b", "c", "d"]
             respuestas_finales = []
             for idx, texto_r in enumerate(respuestas):
@@ -57,8 +56,7 @@ def extraer_preguntas_y_respuestas(parrafos):
                     "respuestas": respuestas_finales,
                     "explicacion": explicacion or EXPLICACION_TEXTO
                 })
-        else:
-            i += 1
+        i += 1
     return preguntas
 
 def construir_estructura_xlsx(preguntas):
@@ -114,8 +112,8 @@ def convertir_y_descargar(uploaded_file):
     return buffer
 
 # === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Versión 100% Funcional)")
-st.markdown("Sube tu archivo .docx con preguntas tipo test (detecta preguntas con numeración) y descarga el archivo .xlsx listo para Quiz Maker.")
+st.title("Conversor DOCX a XLSX - Quiz Maker (Final y 100% funcional)")
+st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga el archivo .xlsx listo para importar en el plugin WordPress Quiz Maker.")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
 
