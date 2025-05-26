@@ -1,6 +1,3 @@
-# Conversor DOCX a XLSX para Quiz Maker (WordPress Plugin) - Versión Streamlit
-# Autor: Tedi One - Nexo de Negocios Digitales
-
 import docx
 import pandas as pd
 import streamlit as st
@@ -13,26 +10,25 @@ TIPO_PREGUNTA = "radio"
 
 def cargar_documento(file):
     doc = docx.Document(file)
-    return [p for p in doc.paragraphs if p.text.strip() != ""]
+    return [p.text.strip() for p in doc.paragraphs if p.text.strip() != ""]
 
 def extraer_preguntas_y_respuestas(parrafos):
     preguntas = []
     i = 0
-    letras = ["a", "b", "c", "d"]
     while i < len(parrafos):
-        texto = parrafos[i].text.strip()
-        # Detectar pregunta aunque no termine en ?
+        texto = parrafos[i]
+        # Consideramos pregunta si tiene más de 3 palabras (por consistencia con la plantilla)
         if len(texto.split()) > 3:
             pregunta = texto
             respuestas = []
-            explicacion = ""
             respuesta_correcta_letra = ""
+            explicacion = ""
             i += 1
+            # Vamos extrayendo hasta encontrar explicación o fin del bloque
             while i < len(parrafos):
-                line = parrafos[i].text.strip()
+                line = parrafos[i].strip()
                 line_lower = line.lower()
-                # Detección flexible de la línea de respuesta correcta
-                if "respuesta correcta" in line_lower or "respuesta:" in line_lower:
+                if "respuesta correcta" in line_lower:
                     match = re.search(r"[a-d]", line_lower)
                     if match:
                         respuesta_correcta_letra = match.group(0).lower()
@@ -45,11 +41,12 @@ def extraer_preguntas_y_respuestas(parrafos):
                     i += 1
                     continue
                 else:
-                    # Limpiar espacios y numeración tipo "1.", "-", etc.
-                    respuesta_limpia = re.sub(r"^[0-9]+\.|-", "", line).strip()
-                    respuestas.append(respuesta_limpia)
+                    # Limpiamos numeraciones o guiones
+                    respuesta = re.sub(r"^[0-9]+\.|-", "", line).strip()
+                    respuestas.append(respuesta)
                     i += 1
-            # Vincular la letra de respuesta correcta con el texto
+            # Vinculamos la letra de la respuesta correcta con la opción real
+            letras = ["a", "b", "c", "d"]
             respuestas_finales = []
             for idx, texto_r in enumerate(respuestas):
                 letra_opcion = letras[idx] if idx < len(letras) else ""
@@ -117,8 +114,8 @@ def convertir_y_descargar(uploaded_file):
     return buffer
 
 # === INTERFAZ STREAMLIT ===
-st.title("Conversor DOCX a XLSX - Quiz Maker (Formato Flexible)")
-st.markdown("Sube tu archivo .docx con preguntas tipo test (formato flexible) y descarga un archivo .xlsx listo para importar en WordPress Quiz Maker.")
+st.title("Conversor DOCX a XLSX - Quiz Maker (Flexible y 100% funcional)")
+st.markdown("Sube tu archivo .docx con preguntas tipo test y descarga un archivo .xlsx listo para importar en el plugin WordPress Quiz Maker.")
 
 uploaded_file = st.file_uploader("Selecciona el archivo DOCX", type=["docx"])
 
