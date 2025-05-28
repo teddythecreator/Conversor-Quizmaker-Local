@@ -1,0 +1,26 @@
+
+INSTRUCCIONES PARA PREPARAR EL ARCHIVO DE PREGUNTAS
+
+1️⃣ Cada pregunta debe comenzar con el enunciado en NEGRITA y sin otros formatos (no usar cursiva, subrayados, etc.).
+
+2️⃣ Después del enunciado, incluye 4 respuestas posibles, cada una en una línea independiente.  
+   Ejemplo:  
+   Respuesta A  
+   Respuesta B  
+   Respuesta C  
+   Respuesta D
+
+3️⃣ Añade una línea con la respuesta correcta indicando la letra:  
+   Ejemplo:  
+   Respuesta correcta: b
+
+4️⃣ Opcionalmente, añade una explicación breve que ayude a los estudiantes a entender la respuesta correcta:  
+   Ejemplo:  
+   Explicación correcta: breve explicación
+
+⚠️ Ten en cuenta:  
+- Evita dejar preguntas o respuestas incompletas.  
+- No añadas formatos especiales o títulos adicionales.  
+- El orden debe mantenerse siempre: Enunciado, Respuestas, Respuesta correcta, Explicación correcta.
+
+¡Gracias por preparar el archivo correctamente!
