@@ -9,7 +9,7 @@ import json
 import re
 import unicodedata
 
-EXPLICACION_TEXTO = "Por favor revisa la explicación de la respuesta para entender mejor el tema abordado."
+EXPLICACION_TEXTO = ""
 TIPO_PREGUNTA = "radio"
 
 def normalizar_texto(texto):
